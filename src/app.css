@@ -117,59 +117,9 @@ button {
 }
 
 .main-content {
-  padding: 4.5rem 0 6rem;
+  padding: 2.5rem 0 6rem;
 }
 
-.hero {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 2rem;
-  padding-bottom: 3.5rem;
-}
-
-.hero__copy {
-  max-width: 42rem;
-}
-
-.eyebrow {
-  margin: 0 0 1rem;
-  color: var(--accent-dark);
-}
-
-.hero h1 {
-  max-width: 12ch;
-  margin: 0;
-  color: var(--ink);
-  font-size: clamp(2.8rem, 7vw, 5.2rem);
-  font-weight: 720;
-  letter-spacing: -0.075em;
-  line-height: 0.94;
-}
-
-.hero__lede {
-  max-width: 35rem;
-  margin: 1.5rem 0 0;
-  color: var(--ink-soft);
-  font-size: 1.05rem;
-  line-height: 1.65;
-}
-
-.hero__actions {
-  display: flex;
-  flex: 0 0 auto;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 1rem;
-}
-
-.story-count {
-  color: var(--muted);
-  font-size: 0.78rem;
-  font-weight: 650;
-}
-
-.refresh-button,
 .sort-button {
   display: inline-flex;
   align-items: center;
@@ -189,27 +139,11 @@ button {
     transform 160ms ease;
 }
 
-.refresh-button {
-  min-height: 2.7rem;
-  padding: 0 1rem;
-}
-
-.refresh-button:hover:not(:disabled),
 .sort-button:hover {
   border-color: var(--ink-soft);
   background: var(--surface);
   color: var(--ink);
   transform: translateY(-1px);
-}
-
-.refresh-button:disabled {
-  cursor: wait;
-  opacity: 0.6;
-}
-
-.refresh-button svg {
-  width: 1rem;
-  height: 1rem;
 }
 
 .feed-header {
@@ -223,6 +157,7 @@ button {
 }
 
 .feed-header__title {
+  margin: 0;
   color: var(--ink);
   font-size: 0.82rem;
   font-weight: 800;
@@ -384,10 +319,6 @@ button {
   height: 1rem;
 }
 
-.refresh-button[aria-busy="true"] svg {
-  animation: spin 800ms linear infinite;
-}
-
 .back-link {
   display: inline-flex;
   align-items: center;
@@ -426,25 +357,14 @@ button {
   line-height: 1.6;
 }
 
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
   }
 
-  .refresh-button,
   .sort-button,
   .story-card__open {
     transition: none;
-  }
-
-  .refresh-button[aria-busy="true"] svg {
-    animation: none;
   }
 }
 
@@ -462,21 +382,7 @@ button {
   }
 
   .main-content {
-    padding-top: 3rem;
-  }
-
-  .hero {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 1.75rem;
-    padding-bottom: 2.5rem;
-  }
-
-  .hero__actions {
-    align-items: flex-start;
-    flex-direction: row;
-    justify-content: space-between;
-    width: 100%;
+    padding-top: 2rem;
   }
 
   .story-card {

@@ -31,7 +31,8 @@ export interface CommentItem extends HackerNewsItem {
 export interface CommentNode {
   item: CommentItem;
   replies: CommentNode[];
-  totalReplyCount: number;
+  replyIds: number[];
+  replyCount: number;
 }
 
 export type CommentSort = 'newest' | 'replies';

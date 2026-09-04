@@ -1,11 +1,11 @@
 import type { CommentNode, CommentSort } from '$lib/types';
 
 function compareNewest(left: CommentNode, right: CommentNode): number {
-  return right.item.time - left.item.time || right.totalReplyCount - left.totalReplyCount;
+  return right.item.time - left.item.time || right.replyCount - left.replyCount;
 }
 
 function compareReplies(left: CommentNode, right: CommentNode): number {
-  return right.totalReplyCount - left.totalReplyCount || right.item.time - left.item.time;
+  return right.replyCount - left.replyCount || right.item.time - left.item.time;
 }
 
 export function sortCommentTree(

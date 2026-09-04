@@ -1,18 +1,59 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
+  import { COMMENT_BATCH_SIZE } from '$lib/api';
   import CommentThread from '$lib/components/CommentThread.svelte';
   import { formatLoadedAt, formatNumber, formatRelativeTime, getDomain, isSafeExternalUrl } from '$lib/format';
-  import { sanitizeHtmlFragment } from '$lib/sanitize';
   import { sortCommentTree } from '$lib/sort-comments';
-  import type { CommentSort } from '$lib/types';
+  import type { CommentNode, CommentSort } from '$lib/types';
   import type { PageData } from './$types';
 
   export let data: PageData;
 
   let sortOrder: CommentSort = 'newest';
+  let comments: CommentNode[] = [];
+  let commentCursor = 0;
+  let loadingComments = false;
+  let commentsError: string | null = null;
 
-  $: sortedComments = sortCommentTree(data.comments, sortOrder);
+  $: sortedComments = sortCommentTree(comments, sortOrder);
   $: domain = getDomain(data.story.url);
-  $: commentCount = data.story.descendants ?? data.comments.reduce((total, comment) => total + comment.totalReplyCount + 1, 0);
+  $: commentCount = data.story.descendants ?? data.commentIds.length;
+
+  onMount(() => {
+    void loadMoreComments();
+  });
+
+  async function loadCommentBatch(ids: readonly number[]) {
+    const response = await window.fetch(`/api/comments?ids=${ids.join(',')}`);
+
+    if (!response.ok) {
+      throw new Error('Could not load comments.');
+    }
+
+    const payload = (await response.json()) as { comments: CommentNode[] };
+    return payload.comments;
+  }
+
+  async function loadMoreComments() {
+    if (loadingComments || commentCursor >= data.commentIds.length) {
+      return;
+    }
+
+    loadingComments = true;
+    commentsError = null;
+
+    const nextIds = data.commentIds.slice(commentCursor, commentCursor + COMMENT_BATCH_SIZE);
+
+    try {
+      const nextComments = await loadCommentBatch(nextIds);
+      comments = [...comments, ...nextComments];
+      commentCursor += nextIds.length;
+    } catch {
+      commentsError = 'Could not load this batch of comments.';
+    } finally {
+      loadingComments = false;
+    }
+  }
 </script>
 
 <svelte:head>
@@ -30,17 +71,20 @@
   </header>
 
   <main class="story-main">
-    <a class="back-link" href="/">
-      <span aria-hidden="true">←</span>
-      Back to stories
-    </a>
+    <nav class="story-nav" aria-label="Story navigation">
+      <a class="back-link" href="/">
+        <span aria-hidden="true">←</span>
+        Back to stories
+      </a>
+      <span class="story-nav__divider" aria-hidden="true">·</span>
+      <h1 class="story-nav__title">{data.story.title}</h1>
+    </nav>
 
     <article class="story-detail">
       <p class="eyebrow">{data.story.type === 'job' ? 'Hacker News / job' : 'Hacker News / story'}</p>
-      <h1>{data.story.title}</h1>
 
       {#if data.story.text}
-        <div class="story-detail__text">{@html sanitizeHtmlFragment(data.story.text)}</div>
+        <div class="story-detail__text">{@html data.story.text}</div>
       {/if}
 
       <div class="story-detail__meta">
@@ -99,21 +143,49 @@
         </div>
       </div>
 
-      {#if sortedComments.length === 0}
+      {#if data.commentIds.length === 0}
         <div class="comments__empty">
           <p>No comments yet.</p>
           <span>Be the first reader to open the discussion on Hacker News.</span>
         </div>
       {:else}
+        <div class="comments__status" aria-live="polite">
+          <span>{comments.length} of {data.commentIds.length} top-level threads loaded</span>
+          {#if loadingComments}
+            <span>Loading a batch...</span>
+          {/if}
+        </div>
+
         <div class="comment-list">
           {#each sortedComments as comment (comment.item.id)}
             <CommentThread
               node={comment}
               referenceTime={data.loadedAt}
               sortOrder={sortOrder}
+              loadReplies={loadCommentBatch}
             />
           {/each}
         </div>
+
+        {#if commentsError}
+          <div class="comments__error" role="alert">
+            <span>{commentsError}</span>
+            <button class="comments__retry" type="button" onclick={() => void loadMoreComments()}>Try again</button>
+          </div>
+        {/if}
+
+        {#if commentCursor < data.commentIds.length}
+          <button
+            class="comments__load-more"
+            type="button"
+            disabled={loadingComments}
+            onclick={() => void loadMoreComments()}
+          >
+            {loadingComments ? 'Loading comments...' : 'Load more top-level comments'}
+          </button>
+        {:else if !loadingComments}
+          <p class="comments__complete">All top-level threads are loaded. Open a thread to load its replies.</p>
+        {/if}
       {/if}
     </section>
   </main>
@@ -129,19 +201,34 @@
     padding: 2.4rem 0 6rem;
   }
 
+  .story-nav {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    min-width: 0;
+  }
+
+  .story-nav__divider {
+    flex: 0 0 auto;
+    color: var(--line-strong);
+  }
+
+  .story-nav__title {
+    min-width: 0;
+    margin: 0;
+    overflow: hidden;
+    color: var(--ink);
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: -0.025em;
+    line-height: 1.35;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
   .story-detail {
     max-width: 55rem;
     padding: 4rem 0 4.5rem;
-  }
-
-  .story-detail h1 {
-    max-width: 18ch;
-    margin: 0;
-    color: var(--ink);
-    font-size: clamp(2.2rem, 6vw, 4.8rem);
-    font-weight: 720;
-    letter-spacing: -0.075em;
-    line-height: 0.98;
   }
 
   .story-detail__text {
@@ -275,6 +362,67 @@
     padding: 0.75rem 0 0;
   }
 
+  .comments__status {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.7rem 0;
+    border-top: 1px solid var(--line);
+    color: var(--muted);
+    font-size: 0.7rem;
+  }
+
+  .comments__load-more,
+  .comments__retry {
+    border: 0;
+    background: transparent;
+    color: var(--accent-dark);
+    cursor: pointer;
+    font-size: 0.72rem;
+    font-weight: 760;
+  }
+
+  .comments__load-more {
+    display: block;
+    width: 100%;
+    margin-top: 1rem;
+    padding: 0.9rem;
+    border: 1px solid var(--line-strong);
+    border-radius: 0.5rem;
+  }
+
+  .comments__load-more:hover:not(:disabled),
+  .comments__retry:hover {
+    border-color: var(--accent);
+    background: var(--accent-pale);
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+  }
+
+  .comments__load-more:disabled {
+    cursor: wait;
+    opacity: 0.6;
+  }
+
+  .comments__error {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-top: 1rem;
+    padding: 0.8rem 0;
+    color: var(--accent-dark);
+    font-size: 0.72rem;
+  }
+
+  .comments__complete {
+    margin: 1.5rem 0 0;
+    color: var(--muted);
+    font-size: 0.7rem;
+    text-align: center;
+  }
+
   .comments__empty {
     padding: 3rem 0;
     border-top: 1px solid var(--line);
@@ -295,6 +443,16 @@
   @media (max-width: 42rem) {
     .story-main {
       padding-top: 1.8rem;
+    }
+
+    .story-nav {
+      align-items: flex-start;
+    }
+
+    .story-nav__title {
+      overflow: visible;
+      font-size: 0.9rem;
+      white-space: normal;
     }
 
     .story-detail {
