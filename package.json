@@ -1,0 +1,29 @@
+{
+  "name": "hnews",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.20.0",
+  "scripts": {
+    "dev": "vite dev",
+    "build": "vite build",
+    "preview": "vite preview",
+    "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+    "lint": "biome check .",
+    "format": "biome format --write ."
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.5.12",
+    "@sveltejs/adapter-auto": "^7.0.1",
+    "@sveltejs/kit": "^2.70.3",
+    "@sveltejs/vite-plugin-svelte": "^7.3.0",
+    "@types/node": "^26.4.1",
+    "@types/sanitize-html": "^2.16.1",
+    "svelte": "^5.57.0",
+    "svelte-check": "^4.7.6",
+    "typescript": "^6.0.3",
+    "vite": "^8.2.2"
+  },
+  "dependencies": {
+    "sanitize-html": "^2.17.7"
+  }
+}
