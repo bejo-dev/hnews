@@ -1,20 +1,39 @@
 <script lang="ts">
+  import { flip } from 'svelte/animate';
+  import { cubicOut } from 'svelte/easing';
   import { onMount } from 'svelte';
+  import { fly, slide } from 'svelte/transition';
   import StoryCard from '../components/StoryCard.svelte';
   import { getTopStories } from '../api';
   import { formatLoadedAt } from '../format';
   import { readCachedStories, writeCachedStories } from '../story-cache';
   import type { FeedItem } from '../types';
 
+  const STORIES_REFRESH_INTERVAL = 60_000;
+
   let stories: FeedItem[] = [];
   let loadedAt = Date.now();
   let loading = true;
+  let refreshing = false;
   let errorMessage: string | null = null;
   let usingCachedStories = false;
+  let requestInFlight = false;
+  let prefersReducedMotion = false;
   let disposed = false;
 
   async function loadStories(): Promise<void> {
-    loading = true;
+    if (requestInFlight) {
+      return;
+    }
+
+    requestInFlight = true;
+
+    if (stories.length > 0) {
+      refreshing = true;
+    } else {
+      loading = true;
+    }
+
     errorMessage = null;
 
     try {
@@ -25,24 +44,30 @@
       }
 
       stories = nextStories;
-      loadedAt = Date.now();
+      const nextLoadedAt = Date.now();
+
+      loadedAt = nextLoadedAt;
       usingCachedStories = false;
 
       if (nextStories.length > 0) {
-        writeCachedStories(nextStories, loadedAt);
+        writeCachedStories(nextStories, nextLoadedAt);
       }
     } catch {
       if (!disposed) {
         errorMessage = 'Could not load the Hacker News front page.';
       }
     } finally {
+      requestInFlight = false;
+
       if (!disposed) {
         loading = false;
+        refreshing = false;
       }
     }
   }
 
   onMount(() => {
+    prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const cachedStories = readCachedStories();
 
     if (cachedStories) {
@@ -54,8 +79,13 @@
       void loadStories();
     }
 
+    const pollId = window.setInterval(() => {
+      void loadStories();
+    }, STORIES_REFRESH_INTERVAL);
+
     return () => {
       disposed = true;
+      window.clearInterval(pollId);
     };
   });
 </script>
@@ -77,12 +107,12 @@
   </header>
 
   <main class="main-content">
-    <section aria-labelledby="feed-title" aria-busy={loading}>
+    <section aria-labelledby="feed-title" aria-busy={loading || refreshing}>
       <div class="feed-header">
         <h1 id="feed-title" class="feed-header__title">Top stories</h1>
         {#if stories.length > 0}
           <time class="feed-header__updated" datetime={new Date(loadedAt).toISOString()}>
-            Updated {formatLoadedAt(loadedAt)} UTC
+            {refreshing ? 'Updating...' : `Updated ${formatLoadedAt(loadedAt)} UTC`}
           </time>
         {/if}
       </div>
@@ -103,7 +133,13 @@
       {:else}
         <ol class="story-list">
           {#each stories as story, index (story.id)}
-            <li><StoryCard story={story} rank={index + 1} referenceTime={loadedAt} /></li>
+            <li
+              animate:flip={{ duration: prefersReducedMotion ? 0 : 560, easing: cubicOut }}
+              in:fly={{ y: prefersReducedMotion ? 0 : -18, duration: prefersReducedMotion ? 0 : 360, easing: cubicOut }}
+              out:slide={{ duration: prefersReducedMotion ? 0 : 320, easing: cubicOut }}
+            >
+              <StoryCard story={story} rank={index + 1} referenceTime={loadedAt} />
+            </li>
           {/each}
         </ol>
 
