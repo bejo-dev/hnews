@@ -1,8 +1,8 @@
 <script lang="ts">
-  import { COMMENT_BATCH_SIZE } from '$lib/api';
-  import { formatRelativeTime } from '$lib/format';
-  import { sortCommentTree } from '$lib/sort-comments';
-  import type { CommentNode, CommentSort } from '$lib/types';
+  import { COMMENT_BATCH_SIZE } from '../api';
+  import { formatRelativeTime } from '../format';
+  import { sortCommentTree } from '../sort-comments';
+  import type { CommentNode, CommentSort } from '../types';
 
   export let node: CommentNode;
   export let depth = 0;

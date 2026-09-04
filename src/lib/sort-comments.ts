@@ -1,4 +1,4 @@
-import type { CommentNode, CommentSort } from '$lib/types';
+import type { CommentNode, CommentSort } from './types';
 
 function compareNewest(left: CommentNode, right: CommentNode): number {
   return right.item.time - left.item.time || right.replyCount - left.replyCount;

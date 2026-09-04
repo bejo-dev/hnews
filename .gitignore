@@ -2,9 +2,5 @@
 .env
 .env.*
 !.env.example
-.svelte-kit/
-build/
 dist/
 node_modules/
-/.vercel/
-/.netlify/

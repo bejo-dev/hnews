@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { formatNumber, formatRelativeTime, getDomain, isSafeExternalUrl } from '$lib/format';
-  import type { FeedItem } from '$lib/types';
+  import { formatNumber, formatRelativeTime, getDomain, isSafeExternalUrl } from '../format';
+  import type { FeedItem } from '../types';
 
   export let story: FeedItem;
   export let rank: number;
