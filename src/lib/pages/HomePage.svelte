@@ -3,12 +3,14 @@
   import StoryCard from '../components/StoryCard.svelte';
   import { getTopStories } from '../api';
   import { formatLoadedAt } from '../format';
+  import { readCachedStories, writeCachedStories } from '../story-cache';
   import type { FeedItem } from '../types';
 
   let stories: FeedItem[] = [];
   let loadedAt = Date.now();
   let loading = true;
   let errorMessage: string | null = null;
+  let usingCachedStories = false;
   let disposed = false;
 
   async function loadStories(): Promise<void> {
@@ -24,6 +26,11 @@
 
       stories = nextStories;
       loadedAt = Date.now();
+      usingCachedStories = false;
+
+      if (nextStories.length > 0) {
+        writeCachedStories(nextStories, loadedAt);
+      }
     } catch {
       if (!disposed) {
         errorMessage = 'Could not load the Hacker News front page.';
@@ -36,7 +43,16 @@
   }
 
   onMount(() => {
-    void loadStories();
+    const cachedStories = readCachedStories();
+
+    if (cachedStories) {
+      stories = cachedStories.stories;
+      loadedAt = cachedStories.loadedAt;
+      usingCachedStories = true;
+      loading = false;
+    } else {
+      void loadStories();
+    }
 
     return () => {
       disposed = true;
@@ -55,7 +71,9 @@
       <span class="brand-mark" aria-hidden="true">y</span>
       <span>hnews</span>
     </a>
-    <div class="topbar__status"><span class="status-dot" aria-hidden="true"></span>live from HN</div>
+    <div class="topbar__status">
+      <span class="status-dot" aria-hidden="true"></span>{usingCachedStories ? 'cached from HN' : 'live from HN'}
+    </div>
   </header>
 
   <main class="main-content">

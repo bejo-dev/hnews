@@ -15,7 +15,7 @@
   <div>
     <div class="story-card__heading">
       {#if isSafeExternalUrl(story.url)}
-        <a class="story-card__title" href={story.url} target="_blank" rel="noreferrer">{story.title}</a>
+        <a class="story-card__title" href={story.url}>{story.title}</a>
       {:else}
         <a class="story-card__title" href={`/story/${story.id}`}>{story.title}</a>
       {/if}
@@ -38,20 +38,6 @@
       </a>
     </div>
   </div>
-
-  {#if isSafeExternalUrl(story.url)}
-    <a
-      class="story-card__open"
-      href={story.url}
-      target="_blank"
-      rel="noreferrer"
-      aria-label={'Open original link for ' + story.title}
-    >
-      <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
-        <path d="M5 3h8v8M13 3 7 9M11 13H3V5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
-      </svg>
-    </a>
-  {/if}
 </article>
 
 <style>

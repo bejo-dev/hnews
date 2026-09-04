@@ -1,8 +1,8 @@
-import sanitizeHtml from 'sanitize-html';
+import DOMPurify from 'dompurify';
 
 export function sanitizeHtmlFragment(html: string): string {
-  return sanitizeHtml(html, {
-    allowedTags: [
+  return DOMPurify.sanitize(html, {
+    ALLOWED_TAGS: [
       'a',
       'b',
       'blockquote',
@@ -21,10 +21,7 @@ export function sanitizeHtmlFragment(html: string): string {
       'u',
       'ul',
     ],
-    allowedAttributes: {
-      a: ['href', 'title'],
-    },
-    allowedSchemes: ['http', 'https', 'mailto'],
-    disallowedTagsMode: 'discard',
+    ALLOWED_ATTR: ['href', 'title'],
+    ALLOWED_URI_REGEXP: /^(?:(?:https?|mailto):)/i,
   });
 }
