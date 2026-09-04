@@ -7,6 +7,7 @@
   export let rank: number;
   export let referenceTime: number;
   export let movement: StoryMovement | null = null;
+  export let movementFadeDuration = 500;
   export let reduceMotion = false;
 
   $: domain = getDomain(story.url);
@@ -22,7 +23,7 @@
           class={`story-card__movement story-card__movement--${movement}`}
           aria-hidden="true"
           in:fade={{ duration: reduceMotion ? 0 : 120 }}
-          out:fade={{ duration: reduceMotion ? 0 : 220 }}
+          out:fade={{ duration: reduceMotion ? 0 : movementFadeDuration }}
         >{movement === 'up' ? '↑' : '↓'}</span>
       {/if}
       {#if isSafeExternalUrl(story.url)}

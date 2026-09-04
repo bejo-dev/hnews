@@ -2,7 +2,7 @@
   import { flip } from 'svelte/animate';
   import { cubicOut } from 'svelte/easing';
   import { onMount, tick } from 'svelte';
-  import { fly, slide } from 'svelte/transition';
+  import { fly } from 'svelte/transition';
   import StoryCard from '../components/StoryCard.svelte';
   import { getTopStories } from '../api';
   import { formatLoadedAt } from '../format';
@@ -11,7 +11,10 @@
 
   const STORIES_REFRESH_INTERVAL = 60_000;
   const STORY_MOVE_DURATION = 560;
-  const MOVEMENT_INDICATOR_DELAY = 800;
+  const STORY_ENTRY_DURATION = 360;
+  const STORY_EXIT_DURATION = 360;
+  const MOVEMENT_INDICATOR_DELAY = 2_000;
+  const MOVEMENT_INDICATOR_FADE_DURATION = 500;
 
   let stories: FeedItem[] = [];
   let loadedAt = Date.now();
@@ -196,14 +199,15 @@
           {#each stories as story, index (story.id)}
             <li
               animate:flip={{ duration: prefersReducedMotion ? 0 : STORY_MOVE_DURATION, easing: cubicOut }}
-              in:fly={{ y: prefersReducedMotion ? 0 : -18, duration: prefersReducedMotion ? 0 : 360, easing: cubicOut }}
-              out:slide={{ duration: prefersReducedMotion ? 0 : 320, easing: cubicOut }}
+              in:fly={{ x: prefersReducedMotion ? 0 : -28, y: 0, duration: prefersReducedMotion ? 0 : STORY_ENTRY_DURATION, easing: cubicOut }}
+              out:fly={{ x: prefersReducedMotion ? 0 : 28, y: 0, duration: prefersReducedMotion ? 0 : STORY_EXIT_DURATION, easing: cubicOut }}
             >
               <StoryCard
                 story={story}
                 rank={index + 1}
                 referenceTime={loadedAt}
                 movement={storyMovements[story.id] ?? null}
+                movementFadeDuration={MOVEMENT_INDICATOR_FADE_DURATION}
                 reduceMotion={prefersReducedMotion}
               />
             </li>
