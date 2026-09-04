@@ -1,6 +1,6 @@
 # hnews
 
-A focused, read-only Hacker News reader built with SvelteKit.
+A focused, read-only Hacker News reader built with Svelte and Vite. It is a client-only single-page app: data is loaded directly in the browser from the official Hacker News API.
 
 ## Scope
 
@@ -29,3 +29,5 @@ pnpm build
 ```
 
 Data comes from the [official Hacker News API](https://github.com/HackerNews/API).
+
+When deploying to a static host, configure it to serve `index.html` for unknown application routes so that direct links to story pages work.

@@ -1,4 +1,5 @@
-import type { CommentItem, CommentNode, FeedItem, HackerNewsItem } from '$lib/types';
+import { sanitizeHtmlFragment } from './sanitize';
+import type { CommentItem, CommentNode, FeedItem, HackerNewsItem } from './types';
 
 const API_ROOT = 'https://hacker-news.firebaseio.com/v0';
 export const COMMENT_BATCH_SIZE = 24;
@@ -42,7 +43,10 @@ function toCommentNode(item: CommentItem): CommentNode {
   const replyIds = getReplyIds(item);
 
   return {
-    item,
+    item: {
+      ...item,
+      text: item.text ? sanitizeHtmlFragment(item.text) : item.text,
+    },
     replies: [],
     replyIds,
     replyCount: replyIds.length,
@@ -76,7 +80,10 @@ export async function getStoryDetail(
   }
 
   return {
-    story,
+    story: {
+      ...story,
+      text: story.text ? sanitizeHtmlFragment(story.text) : story.text,
+    },
     commentIds: (story.kids ?? []).filter(Number.isSafeInteger),
   };
 }
