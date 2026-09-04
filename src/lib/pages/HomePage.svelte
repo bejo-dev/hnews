@@ -227,9 +227,7 @@
   </div>
 
   <main class="main-content">
-    <section aria-labelledby="feed-title" aria-busy={loading || refreshing}>
-      <h1 id="feed-title" class="feed-title">Top stories</h1>
-
+    <section aria-label="Top stories" aria-busy={loading || refreshing}>
       {#if loading && stories.length === 0}
         <div class="loading-state" role="status">
           <p>Loading the latest stories...</p>
