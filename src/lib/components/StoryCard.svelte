@@ -14,7 +14,11 @@
 
   <div>
     <div class="story-card__heading">
-      <a class="story-card__title" href={`/story/${story.id}`}>{story.title}</a>
+      {#if isSafeExternalUrl(story.url)}
+        <a class="story-card__title" href={story.url} target="_blank" rel="noreferrer">{story.title}</a>
+      {:else}
+        <a class="story-card__title" href={`/story/${story.id}`}>{story.title}</a>
+      {/if}
       {#if story.type === 'job'}
         <span class="story-card__kind">job</span>
       {:else if domain}

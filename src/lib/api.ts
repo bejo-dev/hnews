@@ -1,9 +1,9 @@
 import type { CommentItem, CommentNode, FeedItem, HackerNewsItem } from '$lib/types';
 
 const API_ROOT = 'https://hacker-news.firebaseio.com/v0';
-const MAX_CONCURRENT_COMMENT_REQUESTS = 12;
+export const COMMENT_BATCH_SIZE = 24;
 
-type HNFetcher = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
+export type HNFetcher = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
 
 async function fetchJson<T>(fetcher: HNFetcher, path: string): Promise<T> {
   const response = await fetcher(`${API_ROOT}${path}`);
@@ -34,74 +34,19 @@ function isCommentItem(item: HackerNewsItem | null): item is CommentItem {
   return Boolean(item && item.type === 'comment' && typeof item.time === 'number');
 }
 
-function createConcurrencyLimiter(limit: number) {
-  let active = 0;
-  const pending: Array<() => void> = [];
-
-  const drain = () => {
-    while (active < limit && pending.length > 0) {
-      const task = pending.shift();
-
-      if (!task) {
-        continue;
-      }
-
-      active += 1;
-      task();
-    }
-  };
-
-  return <T>(task: () => Promise<T>) =>
-    new Promise<T>((resolve, reject) => {
-      pending.push(() => {
-        void task()
-          .then(resolve, reject)
-          .finally(() => {
-            active -= 1;
-            drain();
-          });
-      });
-      drain();
-    });
+function getReplyIds(item: CommentItem): number[] {
+  return (item.kids ?? []).filter(Number.isSafeInteger);
 }
 
-async function fetchCommentTree(fetcher: HNFetcher, ids: number[]): Promise<CommentNode[]> {
-  const limit = createConcurrencyLimiter(MAX_CONCURRENT_COMMENT_REQUESTS);
-  const itemCache = new Map<number, Promise<HackerNewsItem | null>>();
+function toCommentNode(item: CommentItem): CommentNode {
+  const replyIds = getReplyIds(item);
 
-  const getCachedItem = (id: number) => {
-    const cached = itemCache.get(id);
-
-    if (cached) {
-      return cached;
-    }
-
-    const request = limit(() => fetchItem(fetcher, id));
-    itemCache.set(id, request);
-    return request;
+  return {
+    item,
+    replies: [],
+    replyIds,
+    replyCount: replyIds.length,
   };
-
-  const buildNode = async (id: number): Promise<CommentNode | null> => {
-    const item = await getCachedItem(id).catch(() => null);
-
-    if (!isCommentItem(item)) {
-      return null;
-    }
-
-    const replies = (
-      await Promise.all((item.kids ?? []).filter(Number.isSafeInteger).map(buildNode))
-    ).filter((node): node is CommentNode => node !== null);
-
-    return {
-      item,
-      replies,
-      totalReplyCount: replies.reduce((total, reply) => total + reply.totalReplyCount + 1, 0),
-    };
-  };
-
-  return (await Promise.all(ids.filter(Number.isSafeInteger).map(buildNode))).filter(
-    (node): node is CommentNode => node !== null,
-  );
 }
 
 export async function getTopStories(fetcher: HNFetcher, limit = 30): Promise<FeedItem[]> {
@@ -111,10 +56,19 @@ export async function getTopStories(fetcher: HNFetcher, limit = 30): Promise<Fee
   return items.filter(isFeedItem);
 }
 
+export async function getCommentBatch(
+  fetcher: HNFetcher,
+  ids: readonly number[],
+): Promise<CommentNode[]> {
+  const items = await Promise.all(ids.map((id) => fetchItem(fetcher, id)));
+
+  return items.filter(isCommentItem).map(toCommentNode);
+}
+
 export async function getStoryDetail(
   fetcher: HNFetcher,
   id: number,
-): Promise<{ story: FeedItem; comments: CommentNode[] } | null> {
+): Promise<{ story: FeedItem; commentIds: number[] } | null> {
   const story = await fetchItem(fetcher, id);
 
   if (!isFeedItem(story)) {
@@ -123,6 +77,6 @@ export async function getStoryDetail(
 
   return {
     story,
-    comments: await fetchCommentTree(fetcher, story.kids ?? []),
+    commentIds: (story.kids ?? []).filter(Number.isSafeInteger),
   };
 }

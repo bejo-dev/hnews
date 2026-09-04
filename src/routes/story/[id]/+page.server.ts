@@ -1,8 +1,9 @@
 import { error } from '@sveltejs/kit';
 import { getStoryDetail } from '$lib/api';
-import type { PageLoad } from './$types';
+import { sanitizeHtmlFragment } from '$lib/sanitize';
+import type { PageServerLoad } from './$types';
 
-export const load: PageLoad = async ({ fetch, params }) => {
+export const load: PageServerLoad = async ({ fetch, params }) => {
   const id = Number(params.id);
 
   if (!Number.isSafeInteger(id) || id <= 0) {
@@ -17,6 +18,10 @@ export const load: PageLoad = async ({ fetch, params }) => {
 
   return {
     ...detail,
+    story: {
+      ...detail.story,
+      text: detail.story.text ? sanitizeHtmlFragment(detail.story.text) : detail.story.text,
+    },
     loadedAt: Date.now(),
   };
 };

@@ -6,8 +6,9 @@ A focused, read-only Hacker News reader built with SvelteKit.
 
 - The home view shows the current Hacker News top stories.
 - Each story has a dedicated detail view with its full discussion.
+- Top-level comments load in small batches, and nested replies load on demand per thread.
 - Comments are newest-first by default, including nested replies.
-- The "Most replies" option sorts only top-level threads by total descendants. Replies inside each thread remain newest-first.
+- The "Most replies" option sorts only top-level threads by reply count. Replies inside each thread remain newest-first.
 - Story content from the Hacker News API is sanitized before rendering.
 
 There are no profile views, alternate feeds, voting, hiding, flagging, or writing actions.
