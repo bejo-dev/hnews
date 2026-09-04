@@ -5,6 +5,7 @@ A focused, read-only Hacker News reader built with Svelte and Vite. It is a clie
 ## Scope
 
 - The home view shows the current Hacker News top stories.
+- The home feed polls for changes every minute and animates stories as they enter, leave, or change position.
 - Each story has a dedicated detail view with its full discussion.
 - Top-level comments load in small batches, and nested replies load on demand per thread.
 - The top-story feed is cached in local storage so returning to the front page does not fetch it again.
