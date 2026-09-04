@@ -132,6 +132,11 @@
   <meta name="theme-color" content="#f4f5f1" />
 </svelte:head>
 
+<a class="brand" href="/" aria-label="hnews home">
+  <span class="brand-mark" aria-hidden="true">y</span>
+  <span>hnews</span>
+</a>
+
 {#key routeKey}
   {#if route.kind === 'home'}
     <HomePage />

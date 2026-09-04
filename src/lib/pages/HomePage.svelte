@@ -21,12 +21,45 @@
   let loading = true;
   let refreshing = false;
   let errorMessage: string | null = null;
-  let usingCachedStories = false;
   let requestInFlight = false;
   let prefersReducedMotion = false;
   let storyMovements: Record<number, StoryMovement> = {};
+  let pollingIntervalId: number | null = null;
+  let countdownIntervalId: number | null = null;
+  let nextRefreshAt = Date.now() + STORIES_REFRESH_INTERVAL;
+  let secondsUntilRefresh = STORIES_REFRESH_INTERVAL / 1000;
   const movementTimers = new Map<number, number>();
   let disposed = false;
+
+  function updateCountdown(): void {
+    secondsUntilRefresh = Math.max(0, Math.ceil((nextRefreshAt - Date.now()) / 1000));
+  }
+
+  function formatCountdown(seconds: number): string {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+
+    return `${minutes}:${String(remainingSeconds).padStart(2, '0')}`;
+  }
+
+  function resetRefreshTimer(): void {
+    if (pollingIntervalId !== null) {
+      window.clearInterval(pollingIntervalId);
+    }
+
+    nextRefreshAt = Date.now() + STORIES_REFRESH_INTERVAL;
+    updateCountdown();
+    pollingIntervalId = window.setInterval(() => {
+      nextRefreshAt = Date.now() + STORIES_REFRESH_INTERVAL;
+      updateCountdown();
+      void loadStories();
+    }, STORIES_REFRESH_INTERVAL);
+  }
+
+  function handleManualRefresh(): void {
+    resetRefreshTimer();
+    void loadStories();
+  }
 
   function getStoryMovements(
     previousStories: readonly FeedItem[],
@@ -104,7 +137,6 @@
       const nextLoadedAt = Date.now();
 
       loadedAt = nextLoadedAt;
-      usingCachedStories = false;
 
       if (nextStories.length > 0) {
         writeCachedStories(nextStories, nextLoadedAt);
@@ -136,19 +168,25 @@
     if (cachedStories) {
       stories = cachedStories.stories;
       loadedAt = cachedStories.loadedAt;
-      usingCachedStories = true;
       loading = false;
     } else {
       void loadStories();
     }
 
-    const pollId = window.setInterval(() => {
-      void loadStories();
-    }, STORIES_REFRESH_INTERVAL);
+    resetRefreshTimer();
+    countdownIntervalId = window.setInterval(updateCountdown, 1_000);
 
     return () => {
       disposed = true;
-      window.clearInterval(pollId);
+
+      if (pollingIntervalId !== null) {
+        window.clearInterval(pollingIntervalId);
+      }
+
+      if (countdownIntervalId !== null) {
+        window.clearInterval(countdownIntervalId);
+      }
+
       clearMovementTimers();
     };
   });
@@ -160,27 +198,36 @@
 </svelte:head>
 
 <div class="page">
-  <header class="topbar">
-    <a class="brand" href="/" aria-label="hnews home">
-      <span class="brand-mark" aria-hidden="true">y</span>
-      <span>hnews</span>
-    </a>
-    <div class="topbar__status">
-      <span class="status-dot" aria-hidden="true"></span>{usingCachedStories ? 'cached from HN' : 'live from HN'}
-    </div>
-  </header>
+  <div class="feed-controls" aria-label="Feed controls">
+    {#if stories.length > 0}
+      <time class="feed-controls__updated" datetime={new Date(loadedAt).toISOString()}>
+        {refreshing ? 'Updating...' : `Updated ${formatLoadedAt(loadedAt)} UTC`}
+      </time>
+    {:else}
+      <span class="feed-controls__updated">Waiting for stories</span>
+    {/if}
+    <button
+      class:feed-controls__refresh--spinning={refreshing}
+      class="feed-controls__refresh"
+      type="button"
+      aria-label="Refresh stories now"
+      title="Refresh stories"
+      onclick={handleManualRefresh}
+    >
+      <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
+        <path d="M13.25 5.75A5.5 5.5 0 1 0 13.5 9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
+        <path d="M13.25 2.75v3h-3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" />
+      </svg>
+    </button>
+    <span
+      class="feed-controls__countdown"
+      aria-label={`Next update in ${formatCountdown(secondsUntilRefresh)}`}
+      title="Next automatic refresh"
+    >{formatCountdown(secondsUntilRefresh)}</span>
+  </div>
 
   <main class="main-content">
-    <section aria-labelledby="feed-title" aria-busy={loading || refreshing}>
-      <div class="feed-header">
-        <h1 id="feed-title" class="feed-header__title">Top stories</h1>
-        {#if stories.length > 0}
-          <time class="feed-header__updated" datetime={new Date(loadedAt).toISOString()}>
-            {refreshing ? 'Updating...' : `Updated ${formatLoadedAt(loadedAt)} UTC`}
-          </time>
-        {/if}
-      </div>
-
+    <section aria-label="Top stories" aria-busy={loading || refreshing}>
       {#if loading && stories.length === 0}
         <div class="loading-state" role="status">
           <p>Loading the latest stories...</p>
