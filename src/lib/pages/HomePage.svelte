@@ -1,15 +1,17 @@
 <script lang="ts">
   import { flip } from 'svelte/animate';
   import { cubicOut } from 'svelte/easing';
-  import { onMount } from 'svelte';
+  import { onMount, tick } from 'svelte';
   import { fly, slide } from 'svelte/transition';
   import StoryCard from '../components/StoryCard.svelte';
   import { getTopStories } from '../api';
   import { formatLoadedAt } from '../format';
   import { readCachedStories, writeCachedStories } from '../story-cache';
-  import type { FeedItem } from '../types';
+  import type { FeedItem, StoryMovement } from '../types';
 
   const STORIES_REFRESH_INTERVAL = 60_000;
+  const STORY_MOVE_DURATION = 560;
+  const MOVEMENT_INDICATOR_DELAY = 800;
 
   let stories: FeedItem[] = [];
   let loadedAt = Date.now();
@@ -19,7 +21,57 @@
   let usingCachedStories = false;
   let requestInFlight = false;
   let prefersReducedMotion = false;
+  let storyMovements: Record<number, StoryMovement> = {};
+  const movementTimers = new Map<number, number>();
   let disposed = false;
+
+  function getStoryMovements(
+    previousStories: readonly FeedItem[],
+    nextStories: readonly FeedItem[],
+  ): Record<number, StoryMovement> {
+    const previousIndexes = new Map(
+      previousStories.map((story, index) => [story.id, index]),
+    );
+
+    return nextStories.reduce<Record<number, StoryMovement>>((movements, story, index) => {
+      const previousIndex = previousIndexes.get(story.id);
+
+      if (previousIndex !== undefined && previousIndex !== index) {
+        movements[story.id] = index < previousIndex ? 'up' : 'down';
+      }
+
+      return movements;
+    }, {});
+  }
+
+  function clearMovementTimers(): void {
+    for (const timerId of movementTimers.values()) {
+      window.clearTimeout(timerId);
+    }
+
+    movementTimers.clear();
+  }
+
+  function updateMovementIndicators(nextMovements: Record<number, StoryMovement>): void {
+    clearMovementTimers();
+    storyMovements = nextMovements;
+
+    const movementDuration = prefersReducedMotion ? 0 : STORY_MOVE_DURATION;
+    const expiryDelay = movementDuration + MOVEMENT_INDICATOR_DELAY;
+
+    for (const storyIdValue of Object.keys(nextMovements)) {
+      const storyId = Number(storyIdValue);
+      const timerId = window.setTimeout(() => {
+        const remainingMovements = { ...storyMovements };
+
+        delete remainingMovements[storyId];
+        storyMovements = remainingMovements;
+        movementTimers.delete(storyId);
+      }, expiryDelay);
+
+      movementTimers.set(storyId, timerId);
+    }
+  }
 
   async function loadStories(): Promise<void> {
     if (requestInFlight) {
@@ -43,6 +95,8 @@
         return;
       }
 
+      const nextMovements = getStoryMovements(stories, nextStories);
+
       stories = nextStories;
       const nextLoadedAt = Date.now();
 
@@ -51,6 +105,12 @@
 
       if (nextStories.length > 0) {
         writeCachedStories(nextStories, nextLoadedAt);
+      }
+
+      await tick();
+
+      if (!disposed) {
+        updateMovementIndicators(nextMovements);
       }
     } catch {
       if (!disposed) {
@@ -86,6 +146,7 @@
     return () => {
       disposed = true;
       window.clearInterval(pollId);
+      clearMovementTimers();
     };
   });
 </script>
@@ -134,11 +195,17 @@
         <ol class="story-list">
           {#each stories as story, index (story.id)}
             <li
-              animate:flip={{ duration: prefersReducedMotion ? 0 : 560, easing: cubicOut }}
+              animate:flip={{ duration: prefersReducedMotion ? 0 : STORY_MOVE_DURATION, easing: cubicOut }}
               in:fly={{ y: prefersReducedMotion ? 0 : -18, duration: prefersReducedMotion ? 0 : 360, easing: cubicOut }}
               out:slide={{ duration: prefersReducedMotion ? 0 : 320, easing: cubicOut }}
             >
-              <StoryCard story={story} rank={index + 1} referenceTime={loadedAt} />
+              <StoryCard
+                story={story}
+                rank={index + 1}
+                referenceTime={loadedAt}
+                movement={storyMovements[story.id] ?? null}
+                reduceMotion={prefersReducedMotion}
+              />
             </li>
           {/each}
         </ol>

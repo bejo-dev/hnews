@@ -36,3 +36,4 @@ export interface CommentNode {
 }
 
 export type CommentSort = 'newest' | 'replies';
+export type StoryMovement = 'up' | 'down';
