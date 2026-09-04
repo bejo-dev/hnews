@@ -135,14 +135,6 @@
 
 {#if storyLoading}
   <div class="page story-page">
-    <header class="topbar">
-      <a class="brand" href="/" aria-label="hnews home">
-        <span class="brand-mark" aria-hidden="true">y</span>
-        <span>hnews</span>
-      </a>
-      <div class="topbar__status"><span class="status-dot" aria-hidden="true"></span>story view</div>
-    </header>
-
     <main class="story-main">
       <div class="loading-state" role="status">
         <p>Loading this story and its discussion...</p>
@@ -158,14 +150,6 @@
   />
 {:else if story}
   <div class="page story-page">
-    <header class="topbar">
-      <a class="brand" href="/" aria-label="hnews home">
-        <span class="brand-mark" aria-hidden="true">y</span>
-        <span>hnews</span>
-      </a>
-      <div class="topbar__status"><span class="status-dot" aria-hidden="true"></span>story view</div>
-    </header>
-
     <main class="story-main">
       <nav class="story-nav" aria-label="Story navigation">
         <a class="back-link" href="/">
@@ -295,7 +279,7 @@
 
 <style>
   .story-main {
-    padding: 2.4rem 0 6rem;
+    padding: 1.5rem 0 6rem;
   }
 
   .story-nav {
@@ -539,7 +523,7 @@
 
   @media (max-width: 42rem) {
     .story-main {
-      padding-top: 1.8rem;
+      padding-top: 1rem;
     }
 
     .story-nav {

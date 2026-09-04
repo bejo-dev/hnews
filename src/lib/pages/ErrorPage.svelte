@@ -12,10 +12,6 @@
 
 <div class="error-page">
   <div class="error-page__inner">
-    <a class="brand" href="/" aria-label="hnews home">
-      <span class="brand-mark" aria-hidden="true">y</span>
-      <span>hnews</span>
-    </a>
     <p class="eyebrow">{status} / not here</p>
     <h1>{title}</h1>
     <p>{description}</p>
